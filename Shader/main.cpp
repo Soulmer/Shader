@@ -12,6 +12,7 @@ Shader shader;
 
 using namespace std;
 
+// FUNCTIONS ----------
 void framebuffer_size_callback(GLFWwindow* window, int width, int height)
 {
 	glViewport(0, 0, width, height);
@@ -28,6 +29,7 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
 const unsigned int SCREEN_WIDTH = 1000;
 const unsigned int SCREEN_HEIGHT = 1000;
 
+// MAIN ----------
 int main()
 {
 	glfwInit();
@@ -82,21 +84,14 @@ int main()
 	shader.generateBuffers();
 	shader.generateShaders();
 
-	cout << "\nKeys:\n" << "Space : Restart firework\n" << "Esc : Exit presentation\n";
+	cout << "\nKeys:\n" << "Space : Restart fireworks\n" << "Esc : Exit presentation\n";
 
 	glEnable(GL_BLEND);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-	double lastFPStime = glfwGetTime();
-	int frameCounter = 0;
-
 	while (!glfwWindowShouldClose(window))
 	{
-		double thisFPStime = glfwGetTime();
-		frameCounter++;
-
 		shader.renderScene();
-
 		glfwPollEvents();
 	}
 

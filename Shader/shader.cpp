@@ -19,11 +19,13 @@
 
 using namespace std;
 
+//	STRUCT ----------
 struct vertex4f {
 	GLfloat x, y, z, w;
 };
 
 
+// HELPER FUNCTIONS ----------
 string readFile(const char* fileName)
 {
 	string fileContent;
@@ -66,6 +68,7 @@ GLuint loadBMPTexture(const char* fileName)
 	fread(bmpData, 1, imageSize, bmpFile);
 	fclose(bmpFile);
 
+	// Generate texture from bitmap
 	GLuint textureID;
 	glGenTextures(1, &textureID);
 	glBindTexture(GL_TEXTURE_2D, textureID);
@@ -84,6 +87,8 @@ float random(float fMin, float fMax)
 	return fMin + (fMax - fMin) * fRandNum;
 }
 
+
+// SHADER METHODS ----------
 Shader::Shader()
 {
 	srand(time(NULL));
@@ -94,25 +99,30 @@ Shader::Shader()
 
 GLuint Shader::loadBaseProgram(const char* vertexShaderFile, const char* fragmentShaderFile)
 {
+	// Create vertex shader & fragment shader
 	GLuint vertShader = glCreateShader(GL_VERTEX_SHADER);
 	GLuint fragShader = glCreateShader(GL_FRAGMENT_SHADER);
 
+	// Read data from respective shader file
 	string vertShaderStr = readFile(vertexShaderFile);
 	string fragShaderStr = readFile(fragmentShaderFile);
 	const char* vertShaderSrc = vertShaderStr.c_str();
 	const char* fragShaderSrc = fragShaderStr.c_str();
 
+	// Compile shaders
 	glShaderSource(vertShader, 1, &vertShaderSrc, NULL);
 	glCompileShader(vertShader);
 
 	glShaderSource(fragShader, 1, &fragShaderSrc, NULL);
 	glCompileShader(fragShader);
 
+	// Create shader program & attach vertex shader and fragment shader to program & link program
 	GLuint program = glCreateProgram();
 	glAttachShader(program, vertShader);
 	glAttachShader(program, fragShader);
 	glLinkProgram(program);
 
+	// Delete redundant data (once shaders are compiled & attached to program there is no need to keep them in memory)
 	glDeleteShader(vertShader);
 	glDeleteShader(fragShader);
 
@@ -121,20 +131,23 @@ GLuint Shader::loadBaseProgram(const char* vertexShaderFile, const char* fragmen
 
 GLuint Shader::loadComputeProgram(const char* computeShaderFile)
 {
+	// Create compute shader
 	GLuint computeShader = glCreateShader(GL_COMPUTE_SHADER);
 
+	// Read data from compute shader file
 	string computeShaderStr = readFile(computeShaderFile);
 	const char* computeShaderSrc = computeShaderStr.c_str();
 
-	GLint result = GL_FALSE;
-
+	// Compile shader
 	glShaderSource(computeShader, 1, &computeShaderSrc, NULL);
 	glCompileShader(computeShader);
 
+	// Create shader program & attach compute shader to program & link program
 	GLuint program = glCreateProgram();
 	glAttachShader(program, computeShader);
 	glLinkProgram(program);
 
+	// Delete redundant data (once shader is compiled & attached to program there is no need to keep it in memory)
 	glDeleteShader(computeShader);
 
 	return program;
@@ -152,34 +165,39 @@ void Shader::resetPositionSSBO()
 	float startY = 0.26f;
 	float startZ = 0.0f;
 
-	struct vertex4f* verticesPos = (struct vertex4f*)glMapBufferRange(GL_SHADER_STORAGE_BUFFER, 0, particleCount * sizeof(vertex4f), GL_MAP_WRITE_BIT | GL_MAP_INVALIDATE_BUFFER_BIT);
+	// Reset particles position to starting point (0.0f, 0.26f, 0.0f)
+	struct vertex4f* particlesPos = (struct vertex4f*)glMapBufferRange(GL_SHADER_STORAGE_BUFFER, 0, particleCount * sizeof(vertex4f), GL_MAP_WRITE_BIT | GL_MAP_INVALIDATE_BUFFER_BIT);
 	for (int i = 0; i < particleCount; i++) {
-		unsigned seed = chrono::system_clock::now().time_since_epoch().count();
-		mt19937 generator(seed);
-		uniform_real_distribution<float> uniform_1(0.9, 1.1);
-		verticesPos[i].x = startX;
-		verticesPos[i].y = startY;
-		verticesPos[i].z = startZ;
-		verticesPos[i].w = float(uniform_1(generator));
+		particlesPos[i].x = startX;
+		particlesPos[i].y = startY;
+		particlesPos[i].z = startZ;
+		// Reset texture transparency
+		particlesPos[i].w = 1.0f;
 	}
 	glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);
 }
 
 void Shader::resetVelocitySSBO()
 {
-	struct vertex4f* verticesVel = (struct vertex4f*)glMapBufferRange(GL_SHADER_STORAGE_BUFFER, 0, particleCount * sizeof(vertex4f), GL_MAP_WRITE_BIT | GL_MAP_INVALIDATE_BUFFER_BIT);
+	// Reset particles velocity
+	struct vertex4f* particlesVel = (struct vertex4f*)glMapBufferRange(GL_SHADER_STORAGE_BUFFER, 0, particleCount * sizeof(vertex4f), GL_MAP_WRITE_BIT | GL_MAP_INVALIDATE_BUFFER_BIT);
 	for (int i = 0; i < particleCount; i++) {
+		// Generate new starting velocities, based on Mersenne Twister algorithm
 		unsigned seed = chrono::system_clock::now().time_since_epoch().count();
 		mt19937 generator(seed);
-		uniform_real_distribution<float> uniform_1(0.0, 1.0);
-		uniform_real_distribution<float> uniform_2(0.995, 1.005);
-		float theta = 2 * 3.14 * uniform_1(generator);
-		float phi = acos(1 - 2 * uniform_1(generator));
-		float radius = random(0.095f, 0.1f);
-		verticesVel[i].x = sin(phi) * cos(theta) * radius;
-		verticesVel[i].y = sin(phi) * sin(theta) * radius;
-		verticesVel[i].z = cos(phi) * radius;
-		verticesVel[i].w = float(uniform_2(generator));
+		// Generate random numbers, distributed according to the propability density function
+		uniform_real_distribution<float> distribution_angle(0.0f, 1.0f);
+		uniform_real_distribution<float> distribution_mass(0.2f, 0.3f);
+		normal_distribution<float> distribution_radius(1.75f, 0.05f);
+		// Azimuthal angle & polar angle & explosion radius
+		float theta = 2 * 3.14 * distribution_angle(generator);
+		float phi = acos(1 - 2 * distribution_angle(generator));
+		float radius = distribution_radius(generator);
+		particlesVel[i].x = sin(phi) * cos(theta) * radius;
+		particlesVel[i].y = sin(phi) * sin(theta) * radius;
+		particlesVel[i].z = cos(phi) * radius;
+		// Reset mass
+		particlesVel[i].w = distribution_mass(generator);
 	}
 	glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);
 }
@@ -194,28 +212,35 @@ void Shader::resetBuffers()
 
 void Shader::generateBuffers()
 {
+	// Generate VAO (Vertex Array Object)
 	GLuint VAO;
 	glGenVertexArrays(1, &VAO);
 	glBindVertexArray(VAO);
 
+	// Generate SSBOs (Shader Storage Buffer Object)
+	// Positions storage
 	if (glIsBuffer(SSBOPos)) {
 		glDeleteBuffers(1, &SSBOPos);
 	};
+	// Generate buffer & bind buffer & generate empty storage & fill storage with data
 	glGenBuffers(1, &SSBOPos);
 	glBindBuffer(GL_SHADER_STORAGE_BUFFER, SSBOPos);
 	glBufferData(GL_SHADER_STORAGE_BUFFER, particleCount * sizeof(vertex4f), NULL, GL_STATIC_DRAW);
 	resetPositionSSBO();
+	// Bind buffer to index 0
 	glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, SSBOPos);
 
+	// Velocities storage
 	if (glIsBuffer(SSBOVel)) {
 		glDeleteBuffers(1, &SSBOVel);
 	};
+	// Generate buffer & bind buffer & generate empty storage & fill storage with data
 	glGenBuffers(1, &SSBOVel);
 	glBindBuffer(GL_SHADER_STORAGE_BUFFER, SSBOVel);
 	glBufferData(GL_SHADER_STORAGE_BUFFER, particleCount * sizeof(vertex4f), NULL, GL_STATIC_DRAW);
 	resetVelocitySSBO();
+	// Bind buffer to index 1
 	glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, SSBOVel);
-
 }
 
 void Shader::generateTextures()
@@ -230,24 +255,27 @@ void Shader::renderScene()
 	color[2] = 0.0f;
 
 
-	double frameTimeStart = glfwGetTime();
+	float frameTimeStart = glfwGetTime();
 
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 	glEnable(GL_BLEND);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE);
 
+	// Install compute program & set time uniform
 	glUseProgram(computeProgram);
-	glUniform1f(glGetUniformLocation(computeProgram, "dt"), frameDelta * 0.15f);
+	glUniform1f(glGetUniformLocation(computeProgram, "dt"), frameDelta);
 
 	int workingGroups = particleCount / 16;
-
 	glDispatchCompute(workingGroups, 1, 1);
 
+	// Install empty program
 	glUseProgram(0);
 
+	// Define a barrier that orders memory transactions
 	glMemoryBarrier(GL_VERTEX_ATTRIB_ARRAY_BARRIER_BIT);
 
+	// Install base program & set color uniform
 	glUseProgram(baseProgram);
 	glUniform4f(glGetUniformLocation(baseProgram, "inColor"), color[0] / 255.0f, color[1] / 255.0f, color[2] / 255.0f, 1.0f);
 
@@ -255,15 +283,16 @@ void Shader::renderScene()
 
 	glBindTexture(GL_TEXTURE_2D, particleTex);
 
+	// Bind position SSBO to base program
 	GLuint posAttrib = glGetAttribLocation(baseProgram, "pos");
-
 	glBindBuffer(GL_ARRAY_BUFFER, SSBOPos);
 	glVertexAttribPointer(posAttrib, 4, GL_FLOAT, GL_FALSE, 0, 0);
 	glEnableVertexAttribArray(posAttrib);
+
 	glPointSize(16);
 	glDrawArrays(GL_POINTS, 0, particleCount);
 
 	glfwSwapBuffers(window);
 
-	frameDelta = (float)(glfwGetTime() - frameTimeStart) * 100.0f;
+	frameDelta = (float)(glfwGetTime() - frameTimeStart);
 }

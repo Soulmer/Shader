@@ -11,11 +11,11 @@
 class Shader
 {
 private:
-    GLuint baseProgram;
-    GLuint computeProgram;
-    GLuint SSBOPos;
-    GLuint SSBOVel;
-    GLuint particleTex;
+    GLuint baseProgram{};
+    GLuint computeProgram{};
+    GLuint SSBOPos{};
+    GLuint SSBOVel{};
+    GLuint particleTex{};
     float frameDelta = 0.0f;
     float color[3];
     void resetPositionSSBO();
@@ -23,7 +23,7 @@ private:
     GLuint loadBaseProgram(const char* vertexShaderFile, const char* fragmentShaderFile);
     GLuint loadComputeProgram(const char* computeShaderFile);
 public:
-    GLFWwindow* window;
+    GLFWwindow* window{};
     int particleCount = 4096;
     Shader();
     void generateShaders();

@@ -1,6 +1,12 @@
 #version 460
 
-in vec3 pos;
+in vec4 pos;
+out float tex;
+
+// MAIN ----------
 void main () {
-  gl_Position = vec4 (pos, 1.0);
+	vec3 newPos = pos.xyz;
+	float newTex = pos.w;
+	gl_Position = vec4(newPos, 1.0);
+	tex = newTex;
 }
