@@ -15,11 +15,13 @@ private:
     GLuint computeProgram{};
     GLuint SSBOPos{};
     GLuint SSBOVel{};
+    GLuint SSBORnd{};
     GLuint particleTex{};
     float frameDelta = 0.0f;
     float color[3];
     void resetPositionSSBO();
     void resetVelocitySSBO();
+    void resetRandomSSBO();
     GLuint loadBaseProgram(const char* vertexShaderFile, const char* fragmentShaderFile);
     GLuint loadComputeProgram(const char* computeShaderFile);
 public:

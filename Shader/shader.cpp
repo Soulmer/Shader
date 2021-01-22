@@ -202,12 +202,31 @@ void Shader::resetVelocitySSBO()
 	glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);
 }
 
+void Shader::resetRandomSSBO()
+{
+	// Reset particles random numbers
+	struct vertex4f* particlesRnd = (struct vertex4f*)glMapBufferRange(GL_SHADER_STORAGE_BUFFER, 0, particleCount * sizeof(vertex4f), GL_MAP_WRITE_BIT | GL_MAP_INVALIDATE_BUFFER_BIT);
+	for (int i = 0; i < particleCount; i++) {
+		// Interpolation starting point
+		particlesRnd[i].x = 0.0f;
+		// Interpolation ending point
+		particlesRnd[i].y = random(0.1f, 1.0f);
+		// Seed
+		particlesRnd[i].z = random(0.1f, 1.0f);
+		// Difference
+		particlesRnd[i].w = 0.0f;
+	}
+	glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);
+}
+
 void Shader::resetBuffers()
 {
 	glBindBuffer(GL_SHADER_STORAGE_BUFFER, SSBOPos);
 	resetPositionSSBO();
 	glBindBuffer(GL_SHADER_STORAGE_BUFFER, SSBOVel);
 	resetVelocitySSBO();
+	glBindBuffer(GL_SHADER_STORAGE_BUFFER, SSBORnd);
+	resetRandomSSBO();
 }
 
 void Shader::generateBuffers()
@@ -241,6 +260,18 @@ void Shader::generateBuffers()
 	resetVelocitySSBO();
 	// Bind buffer to index 1
 	glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, SSBOVel);
+
+	// Random numbers storage
+	if (glIsBuffer(SSBORnd)) {
+		glDeleteBuffers(1, &SSBORnd);
+	};
+	// Generate buffer & bind buffer & generate empty storage & fill storage with data
+	glGenBuffers(1, &SSBORnd);
+	glBindBuffer(GL_SHADER_STORAGE_BUFFER, SSBORnd);
+	glBufferData(GL_SHADER_STORAGE_BUFFER, particleCount * sizeof(vertex4f), NULL, GL_STATIC_DRAW);
+	resetRandomSSBO();
+	// Bind buffer to index 2
+	glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, SSBORnd);
 }
 
 void Shader::generateTextures()

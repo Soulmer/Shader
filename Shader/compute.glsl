@@ -11,28 +11,46 @@ layout(std140, binding = 1) buffer Vel {
     vec4 Velocities[ ];
 };
 
+// Layout 2 - Randoms
+layout(std140, binding = 2) buffer Rnd {
+    vec4 Randoms[ ];
+};
+
 // Input
 layout(local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
 
 // GLOBAL VARIABLES ----------
 const vec3 gravity = vec3(0.0f, -0.26f, 0.0f);
 const float dragCoefficient = 0.47f;
-const float particleDensity = 5.0f;
-const float PI = 3.141592653589;
+const float particleDensity = 4.0f;
 
 // FUNCTIONS ----------
-vec3 enableGravity (vec3 pVel, float dt) {
+bool checkVisibility(float pTex) {
+    if (pTex <= 0.0f) return false;
+    else return true;
+};
+
+vec3 enableGravity(vec3 pVel, float dt) {
     return pVel += gravity * dt;
 };
 
-vec3 enableDrag (vec3 pVel, float pMass, float dt) {
+vec3 enableDrag(vec3 pVel, float pMass, float dt) {
     return pVel -= (dragCoefficient / pMass) * pVel * dt;
 };
 
-float enableBurningOut (float pMass, float pTex, float dt) {
-    return pTex -= PI * pMass * pTex * dt;
+vec4 noise(vec4 pRnd, float dt) {
+    if (abs(pRnd.x - pRnd.y) <= 0.005f) {
+        pRnd.x = pRnd.y;
+        pRnd.y = pRnd.y * pRnd.z;
+    }
+    pRnd.w = mix(pRnd.x, pRnd.y, dt);
+    return pRnd;
 };
 
+float enableBurningOut(float pTex, float dt, float pMass, vec4 pRnd) {
+    vec4 random = noise(pRnd, dt);
+    return pTex -= pTex * random.w / pMass;
+};
 
 // UNIFORM ----------
 // Frame delta for calculations
@@ -51,12 +69,17 @@ void main() {
     vec3 pVel = Velocities[index].xyz;
     float pMass = Velocities[index].w;
 
+    vec4 pRnd = Randoms[index].xyzw;
+
+    // Check if particle is visible
+    if (!checkVisibility(pTex)) return;
+
     // Calculate new velocity
     pVel = enableDrag(pVel, pMass, dt); 
     pVel = enableGravity(pVel, dt);
 
     // Enable transparency change
-    pTex = enableBurningOut(pMass, pTex, dt);
+    pTex = enableBurningOut(pTex, dt, pMass, pRnd);
 
     // Move particle by velocity
     pPos += pVel * dt;
@@ -70,4 +93,6 @@ void main() {
     Velocities[index].xyz = pVel;
     // Velocities.w -> particle mass
     Velocities[index].w = pMass;
+    // Random numbers for noise function
+    Randoms[index].xyzw = pRnd;
 }
