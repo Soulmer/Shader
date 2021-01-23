@@ -1,0 +1,118 @@
+#version 460
+
+// LAYOUTS ----------
+// Layout 0 - Positions
+layout(std140, binding = 0) buffer Pos {
+   vec4 Positions[ ];
+};
+
+// Layout 1 - Velocities
+layout(std140, binding = 1) buffer Vel {
+    vec4 Velocities[ ];
+};
+
+// Layout 2 - Randoms
+layout(std140, binding = 2) buffer Rnd {
+    vec4 Randoms[ ];
+};
+
+// Input
+layout(local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
+
+// GLOBAL VARIABLES ----------
+const vec3 gravity = vec3(0.0f, -0.26f, 0.0f);
+const float dragCoefficient = 0.47f;
+const float particleDensity = 4.0f;
+const float PI = 3.141592653589f;
+const float waveLength = 0.5f;
+const float amplitude = 1.0f;
+
+// FUNCTIONS ----------
+bool checkVisibility(float pTex) {
+    if (pTex <= 0.0f) return false;
+    else return true;
+};
+
+vec3 enableGravity(vec3 pVel, float dt) {
+    return pVel += gravity * dt;
+};
+
+vec3 enableDrag(vec3 pVel, float pMass, float dt) {
+    return pVel -= (dragCoefficient / pMass) * pVel * dt;
+};
+
+float rand(float n) {
+    return fract(sin(n) * 43758.5453123);
+};
+
+float interpolate(float a, float b, float dt) {
+    float ft = dt * PI;
+    float f = (1 - cos(ft)) * 0.5f;
+    return a * (1 - f) + b * f;
+};
+
+vec4 enableNoise(vec4 pRnd, float pMass, float dt, float pTex) {
+    if (pRnd.z >= waveLength) {
+        pRnd.x = pRnd.y;
+        pRnd.y = 0.5f / (rand(pMass * 100.0f) + 0.01f);
+        pRnd.w = pRnd.x * amplitude;
+        pRnd.z = 0.0f;
+    } else {
+        pRnd.w = interpolate(pRnd.x, pRnd.y, (mod(pRnd.z, waveLength) / waveLength)) * amplitude;
+    }
+
+    pRnd.z += dt;
+    return pRnd;
+};
+
+float enableBurningOut(float pTex, float noise) {
+    return pTex -= noise * 0.01;
+};
+
+// UNIFORM ----------
+// Frame delta for calculations
+uniform float dt;
+
+// MAIN ----------
+void main() {
+
+    // Current SSBO index
+    uint index = gl_GlobalInvocationID.x;
+
+    // Read data
+    vec3 pPos = Positions[index].xyz;
+    float pTex = Positions[index].w;
+
+    vec3 pVel = Velocities[index].xyz;
+    float pMass = Velocities[index].w;
+
+    vec4 pRnd = Randoms[index].xyzw;
+
+    // Check if particle is visible
+    if (!checkVisibility(pTex)) return;
+
+    // Calculate new velocity
+    pVel = enableDrag(pVel, pMass, dt); 
+    pVel = enableGravity(pVel, dt);
+
+    // Calculate texture transparency over time
+    pRnd = enableNoise(pRnd, pMass, dt, pTex);
+
+    // Enable transparency change
+    pTex = enableBurningOut(pTex, pRnd.w);
+
+    // Move particle by velocity
+    pPos += pVel * dt;
+
+    // Write data back
+    // Positions.xyz -> vector with x, y, z coordinates of a single particle
+    Positions[index].xyz = pPos;
+    // Positions.w -> particle transparency
+    Positions[index].w = pTex;
+    // Velocities.xyz -> velocity vector of a single particle
+    Velocities[index].xyz = pVel;
+    // Velocities.w -> particle mass
+    Velocities[index].w = pMass;
+    // Random numbers for noise function
+    Randoms[index].xyzw = pRnd;
+}
