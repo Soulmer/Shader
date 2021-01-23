@@ -211,9 +211,9 @@ void Shader::resetRandomSSBO()
 		particlesRnd[i].x = 0.0f;
 		// Interpolation ending point
 		particlesRnd[i].y = random(0.1f, 1.0f);
-		// Seed
-		particlesRnd[i].z = random(0.1f, 1.0f);
-		// Difference
+		// Delta time of a single phase
+		particlesRnd[i].z = 0.0f;
+		// Random number
 		particlesRnd[i].w = 0.0f;
 	}
 	glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);

@@ -23,6 +23,9 @@ layout(local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
 const vec3 gravity = vec3(0.0f, -0.26f, 0.0f);
 const float dragCoefficient = 0.47f;
 const float particleDensity = 4.0f;
+const float PI = 3.141592653589f;
+const float waveLength = 0.5f;
+const float amplitude = 1.0f;
 
 // FUNCTIONS ----------
 bool checkVisibility(float pTex) {
@@ -38,18 +41,32 @@ vec3 enableDrag(vec3 pVel, float pMass, float dt) {
     return pVel -= (dragCoefficient / pMass) * pVel * dt;
 };
 
-vec4 noise(vec4 pRnd, float dt) {
-    if (abs(pRnd.x - pRnd.y) <= 0.005f) {
+float rand(float n) {
+    return fract(sin(n) * 43758.5453123);
+};
+
+float interpolate(float a, float b, float dt) {
+    float ft = dt * PI;
+    float f = (1 - cos(ft)) * 0.5f;
+    return a * (1 - f) + b * f;
+};
+
+vec4 enableNoise(vec4 pRnd, float pMass, float dt, float pTex) {
+    if (pRnd.z >= waveLength) {
         pRnd.x = pRnd.y;
-        pRnd.y = pRnd.y * pRnd.z;
+        pRnd.y = 0.5f / (rand(pMass * 100.0f) + 0.01f);
+        pRnd.w = pRnd.x * amplitude;
+        pRnd.z = 0.0f;
+    } else {
+        pRnd.w = interpolate(pRnd.x, pRnd.y, (mod(pRnd.z, waveLength) / waveLength)) * amplitude;
     }
-    pRnd.w = mix(pRnd.x, pRnd.y, dt);
+
+    pRnd.z += dt;
     return pRnd;
 };
 
-float enableBurningOut(float pTex, float dt, float pMass, vec4 pRnd) {
-    vec4 random = noise(pRnd, dt);
-    return pTex -= pTex * random.w / pMass;
+float enableBurningOut(float pTex, float noise) {
+    return pTex -= noise * 0.01;
 };
 
 // UNIFORM ----------
@@ -78,8 +95,11 @@ void main() {
     pVel = enableDrag(pVel, pMass, dt); 
     pVel = enableGravity(pVel, dt);
 
+    // Calculate texture transparency over time
+    pRnd = enableNoise(pRnd, pMass, dt, pTex);
+
     // Enable transparency change
-    pTex = enableBurningOut(pTex, dt, pMass, pRnd);
+    pTex = enableBurningOut(pTex, pRnd.w);
 
     // Move particle by velocity
     pPos += pVel * dt;
