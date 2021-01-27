@@ -28,13 +28,13 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <None Include="vertex.glsl">
+    <None Include="shader.comp">
       <Filter>Pliki zasobów</Filter>
     </None>
-    <None Include="fragment.glsl">
+    <None Include="shader.frag">
       <Filter>Pliki zasobów</Filter>
     </None>
-    <None Include="compute.glsl">
+    <None Include="shader.vert">
       <Filter>Pliki zasobów</Filter>
     </None>
   </ItemGroup>

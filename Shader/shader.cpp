@@ -155,8 +155,8 @@ GLuint Shader::loadComputeProgram(const char* computeShaderFile)
 
 void Shader::generateShaders()
 {
-	baseProgram = loadBaseProgram("vertex.glsl", "fragment.glsl");
-	computeProgram = loadComputeProgram("compute.glsl");
+	baseProgram = loadBaseProgram("shader.vert", "shader.frag");
+	computeProgram = loadComputeProgram("shader.comp");
 }
 
 void Shader::resetPositionSSBO()
