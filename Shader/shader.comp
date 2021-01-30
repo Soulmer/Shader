@@ -95,7 +95,7 @@ void main() {
     pVel = enableDrag(pVel, pMass, dt); 
     pVel = enableGravity(pVel, dt);
 
-    // Calculate texture transparency over time
+    // Calculate change of the texture transparency
     pRnd = enableNoise(pRnd, pMass, dt, pTex);
 
     // Enable transparency change

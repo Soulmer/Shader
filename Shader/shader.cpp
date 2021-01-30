@@ -92,9 +92,9 @@ float random(float fMin, float fMax)
 Shader::Shader()
 {
 	srand(time(NULL));
-	color[0] = 0.0;
-	color[1] = 0.0;
-	color[2] = 0.0;
+	color[0] = 255.0f;
+	color[1] = 64.0f;
+	color[2] = 0.0f;
 }
 
 GLuint Shader::loadBaseProgram(const char* vertexShaderFile, const char* fragmentShaderFile)
@@ -281,11 +281,6 @@ void Shader::generateTextures()
 
 void Shader::renderScene()
 {
-	color[0] = 255.0f;
-	color[1] = 64.0f;
-	color[2] = 0.0f;
-
-
 	float frameTimeStart = glfwGetTime();
 
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
